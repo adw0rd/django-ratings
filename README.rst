@@ -58,7 +58,7 @@ Using the model API
 
 And adding votes is also simple::
 
-	myinstance.rating.add(score=1, user=request.user, ip_address=request.META['REMOTE_ADDR'], request.COOKIES) # last param is optional - only if you use COOKIES-auth
+	myinstance.rating.add(score=1, user=request.user, ip_address=request.META['REMOTE_ADDR'], cookies=request.COOKIES) # last param is optional - only if you use COOKIES-auth
 
 Retrieving votes is just as easy::
 
