@@ -72,6 +72,15 @@ class RatingManager(object):
         if not (self.votes and self.score):
             return 0
         return float(self.score)/(self.votes+self.field.weight)
+
+    def get_rating_with_vote_weight(self):
+        """get_rating_with_vote_weight()
+
+        Return the weighted average rating for each vote."""
+        if not (self.votes and self.score):
+            return 0.0
+        votes = self.get_ratings()
+        return round(float(sum([vote.score * vote.weight for vote in votes]) / sum([vote.weight for vote in votes]) + self.field.weight), 1)
     
     def get_opinion_percent(self):
         """get_opinion_percent()
@@ -88,7 +97,7 @@ class RatingManager(object):
         return float(self.score)/self.votes
     
     def get_rating_for_user(self, user, ip_address=None, cookies={}):
-        """get_rating_for_user(user, ip_address=None, cookie=None)
+        """get_rating_for_user(user, ip_address=None, cookies={})
         
         Returns the rating for a user or anonymous IP."""
         kwargs = dict(
@@ -127,14 +136,19 @@ class RatingManager(object):
     def get_iterable_range(self):
         return range(1, self.field.range) #started from 1, because 0 is equal to delete
         
-    def add(self, score, user, ip_address, cookies={}, commit=True):
-        """add(score, user, ip_address)
+    def add(self, score, user, ip_address, cookies={}, weight=1.0, commit=True):
+        """add(score, weight, user, ip_address, cookies={}, commit=True)
         
         Used to add a rating to an object."""
         try:
             score = int(score)
         except (ValueError, TypeError):
             raise InvalidRating("%s is not a valid choice for %s" % (score, self.field.name))
+
+        try:
+            weight = float(weight)
+        except (ValueError, TypeError):
+            raise InvalidRating("%s is not a valid choice for %s" % (weight, self.field.name))
         
         delete = (score == 0)
         if delete and not self.field.allow_delete:
@@ -153,6 +167,7 @@ class RatingManager(object):
         
         defaults = dict(
             score = score,
+            weight = weight,
             ip_address = ip_address,
         )
         

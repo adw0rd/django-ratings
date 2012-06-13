@@ -17,6 +17,7 @@ class Vote(models.Model):
     object_id       = models.PositiveIntegerField()
     key             = models.CharField(max_length=32)
     score           = models.IntegerField()
+    weight          = models.FloatField(default=1.0)
     user            = models.ForeignKey(User, blank=True, null=True, related_name="votes")
     ip_address      = models.IPAddressField()
     cookie          = models.CharField(max_length=32, blank=True, null=True)
