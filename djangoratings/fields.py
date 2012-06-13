@@ -77,10 +77,11 @@ class RatingManager(object):
         """get_rating_with_vote_weight()
 
         Return the weighted average rating for each vote."""
-        if not (self.votes and self.score):
-            return 0.0
         votes = self.get_ratings()
-        return round(float(sum([vote.score * vote.weight for vote in votes]) / sum([vote.weight for vote in votes]) + self.field.weight), 1)
+        try:
+            return round(float(sum([vote.score * vote.weight for vote in votes]) / sum([vote.weight for vote in votes]) + self.field.weight), 1)
+        except ZeroDivisionError:
+            return 0.0
     
     def get_opinion_percent(self):
         """get_opinion_percent()
