@@ -60,7 +60,7 @@ And adding votes is also simple::
 
 	myinstance.rating.add(score=3, user=request.user, ip_address=request.META['REMOTE_ADDR'], cookies=request.COOKIES) # last param is optional - only if you use COOKIES-auth
 
-Adding votes with personal weight::
+**New** Adding votes with personal weight::
 
 	myinstance.rating.add(score=4, user=request.user, ip_address=request.META['REMOTE_ADDR'], weight=2.0, cookies=request.COOKIES) # Default weight is 1.0
 
@@ -71,9 +71,11 @@ Retrieving votes is just as easy::
 
 	myinstance.rating.get_rating_for_user(request.user, request.META['REMOTE_ADDR'], request.COOKIES) # last param is optional - only if you use COOKIES-auth
 
-	myinstance.rating.get_rating_with_vote_weight()  # Receive a sum of votes with weight
+**New** Retrieving sum of votes with weight::
 
-*New* You're also able to delete existent votes (if deletion enabled)::
+	myinstance.rating.get_rating_with_vote_weight()
+
+**New** You're also able to delete existent votes (if deletion enabled)::
 
 	myinstance.rating.delete(request.user, request.META['REMOTE_ADDR'], request.COOKIES) # last param is optional - only if you use COOKIES-auth
 
