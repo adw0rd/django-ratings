@@ -1,4 +1,4 @@
-from django.db.models import IntegerField, PositiveIntegerField
+from django.db.models import IntegerField, PositiveIntegerField, FloatField
 from django.conf import settings
 
 import forms
@@ -42,6 +42,7 @@ class RatingManager(object):
         
         self.votes_field_name = "%s_votes" % (self.field.name,)
         self.score_field_name = "%s_score" % (self.field.name,)
+        self.score_with_vote_weight_field_name = "%s_score_with_vote_weight" % (self.field.name,)
     
     def get_percent(self):
         """get_percent()
@@ -77,11 +78,7 @@ class RatingManager(object):
         """get_rating_with_vote_weight()
 
         Return the weighted average rating for each vote."""
-        votes = self.get_ratings()
-        try:
-            return round(float(sum([vote.score * vote.weight for vote in votes]) / sum([vote.weight for vote in votes]) + self.field.weight), 1)
-        except ZeroDivisionError:
-            return 0.0
+        return self.score_with_vote_weight or 0
     
     def get_opinion_percent(self):
         """get_opinion_percent()
@@ -138,7 +135,7 @@ class RatingManager(object):
         return range(1, self.field.range) #started from 1, because 0 is equal to delete
         
     def add(self, score, user, ip_address, cookies={}, weight=1.0, commit=True):
-        """add(score, weight, user, ip_address, cookies={}, commit=True)
+        """add(score, user, ip_address, cookies={}, weight=1.0, commit=True)
         
         Used to add a rating to an object."""
         try:
@@ -237,8 +234,8 @@ class RatingManager(object):
             #setattr(self.instance, self.field.name, Rating(score=self.score, votes=self.votes))
             
             defaults = dict(
-                score   = self.score,
-                votes   = self.votes,
+                score=self.score,
+                votes=self.votes,
             )
             
             kwargs = dict(
@@ -246,7 +243,13 @@ class RatingManager(object):
                 object_id       = self.instance.pk,
                 key             = self.field.key,
             )
-            
+
+            # Recalc 'score_with_vote_weight' and save to Score.score_with_vote_weight
+            self.score_with_vote_weight = self.get_score_with_vote_weight()
+            defaults.update({
+                'score_with_vote_weight': self.score_with_vote_weight
+            })
+
             try:
                 score, created = Score.objects.get(**kwargs), False
             except Score.DoesNotExist:
@@ -265,6 +268,17 @@ class RatingManager(object):
         if delete:
             adds['deleted'] = True
         return adds
+
+    def get_score_with_vote_weight(self, votes=None):
+        """Returns a score with the weight of the votes
+        """
+        if not votes:
+            votes = self.get_ratings()
+        try:
+            score_with_vote_weight = sum([vote.score * vote.weight for vote in votes]) / sum([vote.weight for vote in votes]) + self.field.weight
+        except ZeroDivisionError:
+            score_with_vote_weight = 0.0
+        return round(float(score_with_vote_weight), 1)
 
     def delete(self, user, ip_address, cookies={}, commit=True):
         return self.add(0, user, ip_address, cookies, commit)
@@ -285,6 +299,14 @@ class RatingManager(object):
         
     score = property(_get_score, _set_score)
 
+    def _get_score_with_vote_weight(self, default=None):
+        return getattr(self.instance, self.score_with_vote_weight_field_name, default)
+
+    def _set_score_with_vote_weight(self, value):
+        setattr(self.instance, self.score_with_vote_weight_field_name, value)
+
+    score_with_vote_weight = property(_get_score_with_vote_weight, _set_score_with_vote_weight)
+
     def get_content_type(self):
         if self.content_type is None:
             self.content_type = ContentType.objects.get_for_model(self.instance)
@@ -299,6 +321,7 @@ class RatingManager(object):
         )
         obj_score = sum([v.score for v in votes])
         obj_votes = len(votes)
+        obj_score_with_vote_weight = self.get_score_with_vote_weight(votes=votes)
 
         score, created = Score.objects.get_or_create(
             content_type    = self.get_content_type(),
@@ -309,12 +332,15 @@ class RatingManager(object):
                 votes       = obj_votes,
             )
         )
+
         if not created:
             score.score = obj_score
             score.votes = obj_votes
+            score.score_with_vote_weight = obj_score_with_vote_weight
             score.save()
         self.score = obj_score
         self.votes = obj_votes
+        self.score_with_vote_weight = obj_score_with_vote_weight
         if commit:
             self.instance.save()
 
@@ -323,6 +349,7 @@ class RatingCreator(object):
         self.field = field
         self.votes_field_name = "%s_votes" % (self.field.name,)
         self.score_field_name = "%s_score" % (self.field.name,)
+        self.score_with_vote_weight_field_name = "%s_score_with_vote_weight" % (self.field.name,)
 
     def __get__(self, instance, type=None):
         if instance is None:
@@ -334,12 +361,13 @@ class RatingCreator(object):
         if isinstance(value, Rating):
             setattr(instance, self.votes_field_name, value.votes)
             setattr(instance, self.score_field_name, value.score)
+            setattr(instance, self.score_with_vote_weight_field_name, value.rating_score_with_vote_weight)
         else:
             raise TypeError("%s value must be a Rating instance, not '%r'" % (self.field.name, value))
 
 class RatingField(IntegerField):
     """
-    A rating field contributes two columns to the model instead of the standard single column.
+    A rating field contributes three columns to the model instead of the standard single column.
     """
     def __init__(self, *args, **kwargs):
         if 'choices' in kwargs:
@@ -367,6 +395,10 @@ class RatingField(IntegerField):
         self.score_field = IntegerField(
             editable=False, default=0, blank=True)
         cls.add_to_class("%s_score" % (self.name,), self.score_field)
+
+        self.score_with_vote_weight_field = FloatField(
+            editable=False, default=0.0, blank=True)
+        cls.add_to_class("%s_score_with_vote_weight" % (self.name,), self.score_with_vote_weight_field)
 
         self.key = md5_hexdigest(self.name)
 

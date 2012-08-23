@@ -51,13 +51,14 @@ class Vote(models.Model):
     partial_ip_address = property(partial_ip_address)
 
 class Score(models.Model):
-    content_type    = models.ForeignKey(ContentType)
-    object_id       = models.PositiveIntegerField()
-    key             = models.CharField(max_length=32)
-    score           = models.IntegerField()
-    votes           = models.PositiveIntegerField()
-    
-    content_object  = generic.GenericForeignKey()
+    content_type           = models.ForeignKey(ContentType)
+    object_id              = models.PositiveIntegerField()
+    key                    = models.CharField(max_length=32)
+    score                  = models.IntegerField()
+    votes                  = models.PositiveIntegerField()
+    score_with_vote_weight = models.FloatField(default=0.0)
+
+    content_object         = generic.GenericForeignKey()
 
     class Meta:
         unique_together = (('content_type', 'object_id', 'key'),)

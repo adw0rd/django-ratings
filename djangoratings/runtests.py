@@ -8,6 +8,10 @@ from django.conf import settings
 if not settings.configured:
     settings.configure(
         DATABASE_ENGINE='sqlite3',
+        # DATABASE_ENGINE='mysql',
+        # DATABASE_NAME='djangoratings',
+        # DATABASE_USER='djangoratings',
+        # DATABASE_PASSWORD='djangoratings',
         INSTALLED_APPS=[
             'django.contrib.auth',
             'django.contrib.contenttypes',

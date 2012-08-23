@@ -2,7 +2,7 @@
 django-ratings
 ##############
 
-A generic ratings module. The field itself appends two additional fields on the model, for optimization reasons. It adds ``<field>_score``, and ``<field>_votes`` fields, which are both integer fields.
+A generic ratings module. The field itself appends three additional fields on the model, for optimization reasons. It adds ``<field>_score``, ``<field>_score_with_vote_weight`` and ``<field>_votes`` fields, which are integer fields.
 
 ============
 Installation
@@ -24,7 +24,7 @@ Finally, run ``python manage.py syncdb`` in your application's directory to crea
 Setup your models
 =================
 
-The way django-ratings is built requires you to attach a RatingField to your models. This field will create two columns, a votes column, and a score column. They will both be prefixed with your field name::
+The way django-ratings is built requires you to attach a RatingField to your models. This field will create three columns, a votes, a score, and a score with vote_weight columns. They will be prefixed with your field name::
 
 	from djangoratings.fields import RatingField
 
@@ -58,11 +58,20 @@ Using the model API
 
 And adding votes is also simple::
 
-	myinstance.rating.add(score=1, user=request.user, ip_address=request.META['REMOTE_ADDR'], cookies=request.COOKIES) # last param is optional - only if you use COOKIES-auth
+	myinstance.rating.add(score=3, user=request.user, ip_address=request.META['REMOTE_ADDR'], cookies=request.COOKIES) # last param is optional - only if you use COOKIES-auth
+
+Adding votes with personal weight::
+
+	myinstance.rating.add(score=4, user=request.user, ip_address=request.META['REMOTE_ADDR'], weight=2.0, cookies=request.COOKIES) # Default weight is 1.0
+
 
 Retrieving votes is just as easy::
 
+	myinstance.rating.get_rating()
+
 	myinstance.rating.get_rating_for_user(request.user, request.META['REMOTE_ADDR'], request.COOKIES) # last param is optional - only if you use COOKIES-auth
+
+	myinstance.rating.get_rating_with_vote_weight()  # Receive a sum of votes with weight
 
 *New* You're also able to delete existent votes (if deletion enabled)::
 
